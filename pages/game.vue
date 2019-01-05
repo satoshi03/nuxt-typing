@@ -46,7 +46,7 @@ export default {
       timer: undefined,
       timerStepMs: 100,
       time: 0,
-      isCorrectLastAnswer: true,
+      isCorrectLastKey: true,
       lastCorrectKeyIndex: 0,
       wrongKeys: [],
       keys : [
@@ -166,12 +166,12 @@ export default {
       // return question when status is started
       if (this.status == "started") {
         if (this.isWrongAnwser()) {
-          if (this.isCorrectLastAnswer) {
+          if (this.isCorrectLastKey) {
             this.wrongKeys.push(this.answer[this.answer.length - 1])
           }
-          this.isCorrectLastAnswer = false
+          this.isCorrectLastKey = false
         } else {
-          this.isCorrectLastAnswer = true
+          this.isCorrectLastKey = true
           this.lastCorrectKeyIndex = this.answer.length
         }
         if (this.isCompleteAnswer()) {
@@ -208,7 +208,7 @@ export default {
       return this.question[this.lastCorrectKeyIndex]
     },
     getWrongKey() {
-      if (this.isCorrectLastAnswer) {
+      if (this.isCorrectLastKey) {
         return ""
       } else {
         return this.wrongKeys[this.wrongKeys.length - 1]
@@ -247,7 +247,7 @@ export default {
       this.status = "ready"
       this.answeredNum = 0
       this.wordCount = 0
-      this.isCorrectLastAnswer = true
+      this.isCorrectLastKey = true
       this.wrongKeys = []
     },
   }
