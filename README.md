@@ -2,6 +2,8 @@
 
 > Brwoser based typing game in JavaScript with NuxtJS.
 
+![demo](https://media.giphy.com/media/1yTcsHSGSV2QyStYUH/giphy.gif)
+
 ## Build Setup
 
 ``` bash
