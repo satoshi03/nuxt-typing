@@ -1,12 +1,15 @@
 <template>
   <section class="container">
     <div class="question-panel">
+      <span v-if="starting()">
+        {{ startTime }}
+      </span>
       <span>
         {{ getQuestion() }}
       </span>
     </div>
     <div class="input-panel">
-      <input @keyup.space="start()" v-model="answer"></input>
+      <input @keyup.escape="reset()" @keyup.space="start()" v-model="answer"></input>
     </div>
     <div class="keyboard">
       <div
@@ -42,6 +45,7 @@ export default {
       answeredNum: 0,
       wordCount: 0,
       answer: "",
+      startTime: 3,
       timer: undefined,
       time: 0,
       isCorrectLastAnswer: true,
@@ -117,17 +121,30 @@ export default {
   },
   methods: {
     start() {
-      if (this.status == "started") {
+      if (this.status == "started" || this.status == "starting") {
         return
       }
 
       if (this.status === "finished") {
         this.reset()
       }
-      this.status = "started"
-      this.timer = setInterval(this.timerCount, 100)
-      this.question = this.words.pop()
+
+      this.status = "starting"
+      this.timer = setInterval(this.startCount, 1000)
+    },
+    starting() {
+      return this.status == "starting"
+    },
+    startCount() {
+      this.startTime -= 1
       this.answer = ""
+      if (this.startTime <= 0) {
+        this.status = "started"
+        clearInterval(this.timer)
+        this.timer = setInterval(this.timerCount, 100)
+        this.question = this.words.pop()
+        this.answer = ""
+      }
     },
     timerCount() {
       this.time += 0.1
@@ -138,6 +155,9 @@ export default {
     getQuestion() {
       if (this.status == "ready") {
         return "下の入力フォームでスペースキーを押すと始まります"
+      }
+      if (this.status == "starting") {
+        return
       }
       if (this.isFinished()) {
         this.status = "finished"
@@ -191,6 +211,7 @@ export default {
       this.answer = ""
       this.words = lodash.shuffle(this.allWords)
       clearInterval(this.timer)
+      this.startTime = 3
       this.time = 0
       this.status = "ready"
       this.answeredNum = 0
@@ -241,14 +262,15 @@ export default {
   flex-direction:column;
   justify-content: center;
   align-items: center;
-  border: 1px solid; 
-  border-radius: 4px;
+  border: 1px solid #35495e;
+  border-radius: 10px;
 }
 
 span {
   font-family: 'Quicksand', 'Source Sans Pro', -apple-system, BlinkMacSystemFont,
     'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   font-size: 30px;
+  color: #35495e;
 }
 
 .input-panel {
@@ -266,6 +288,7 @@ input {
   border-radius: 4px;
   -webkit-border-radius: 3px;
   -moz-border-radius: 3px;
+  color: #35495e;
 }
 
 .keyboard {
