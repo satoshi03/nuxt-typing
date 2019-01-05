@@ -1,0 +1,21 @@
+{
+  "name": "nuxt-typing",
+  "version": "1.0.0",
+  "description": "Brwoser based typing game in JavaScript with NuxtJS.",
+  "author": "Satoshi Innami",
+  "private": true,
+  "scripts": {
+    "dev": "nuxt",
+    "build": "nuxt build",
+    "start": "nuxt start",
+    "generate": "nuxt generate"
+  },
+  "dependencies": {
+    "cross-env": "^5.2.0",
+    "lodash": "^4.17.11",
+    "nuxt": "^2.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^1.11.0"
+  }
+}
