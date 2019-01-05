@@ -1,15 +1,12 @@
 <template>
   <section class="container">
     <div class="question-panel">
-      <span v-if="starting()">
-        {{ startTime }}
-      </span>
       <span>
-        {{ getQuestion() }}
+        {{ getMessage() }}
       </span>
     </div>
     <div class="input-panel">
-      <input @keyup.escape="reset()" @keyup.space="start()" v-model="answer"></input>
+      <input @keyup.escape="reset()" @keyup.space="beforeStart()" v-model="answer"></input>
     </div>
     <div class="keyboard">
       <div
@@ -18,7 +15,7 @@
         >
         <div
           v-for="item in keys[index]"
-          :class="getClass(item)"
+          :class="getKeyClass(item)"
           >
           {{ item.repl }}
         </div>
@@ -47,10 +44,10 @@ export default {
       answer: "",
       startTime: 3,
       timer: undefined,
+      timerStepMs: 100,
       time: 0,
       isCorrectLastAnswer: true,
       lastCorrectKeyIndex: 0,
-      wrongKey: "",
       wrongKeys: [],
       keys : [
         [
@@ -67,7 +64,7 @@ export default {
           { 'repl': '-', 'def': '-', 'cap': '=' },
           { 'repl': '^', 'def': '^', 'cap': '~' },
           { 'repl': '\\', 'def': '\\', 'cap': '|' },
-          { 'repl': 'DEL', 'def': '[DEL]', 'cap': '{', 'class': 'key' },
+          { 'repl': 'DEL', 'def': '[DEL]', 'cap': '[DEL]', 'class': 'key' },
         ],
         [
           { 'repl': 'Q', 'def': 'q', 'cap': 'Q' },
@@ -119,70 +116,87 @@ export default {
       ],
     }
   },
-  methods: {
-    start() {
-      if (this.status == "started" || this.status == "starting") {
-        return
-      }
-
-      if (this.status === "finished") {
-        this.reset()
-      }
-
-      this.status = "starting"
-      this.timer = setInterval(this.startCount, 1000)
-    },
-    starting() {
-      return this.status == "starting"
-    },
-    startCount() {
-      this.startTime -= 1
-      this.answer = ""
-      if (this.startTime <= 0) {
-        this.status = "started"
-        clearInterval(this.timer)
-        this.timer = setInterval(this.timerCount, 100)
-        this.question = this.words.pop()
-        this.answer = ""
-      }
-    },
-    timerCount() {
-      this.time += 0.1
-    },
+  computed: {
     getTime() {
       return Number((this.time).toFixed(1))
     },
-    getQuestion() {
+  },
+  methods: {
+    beforeStart() {
+      if (this.status == "starting" || this.status == "started") {
+        return
+      }
+
+      if (this.status == "finished") {
+        this.reset()
+      }
+
+      // Count down start
+      this.status = "starting"
+      this.answer = ""
+      this.timer = setInterval(this.startCount, 1000)
+    },
+    startCount() {
+      this.startTime -= 1
+      if (this.startTime <= 0) {
+        clearInterval(this.timer)
+        this.start()
+      }
+    },
+    start() {
+      this.status = "started"
+      this.timer = setInterval(this.timerCount, this.timerStepMs)
+      this.answer = ""
+      this.question = this.words.pop()
+    },
+    timerCount() {
+      this.time += this.timerStepMs / 1000
+    },
+    getMessage() {
+      // return instuction when status is ready
       if (this.status == "ready") {
         return "下の入力フォームでスペースキーを押すと始まります"
       }
+
+      // return count down time when status is starting
       if (this.status == "starting") {
-        return
+        return this.startTime
       }
-      if (this.isFinished()) {
-        this.status = "finished"
-        clearInterval(this.timer)
-        var speed = Number(this.wordCount / this.time * 60).toFixed(1)
-        var correctParcent = Number(this.wordCount / (this.wordCount + this.wrongKeys.length) * 100).toFixed(1)
-        return "タイピング速度:" + speed + "WPM, 正答率:" + correctParcent + "%"
-      }
-      if (this.isWrongAnwser()) {
-        if (this.isCorrectLastAnswer) {
-          this.wrongKeys.push(this.answer[this.answer.length - 1])
+
+      // return question when status is started
+      if (this.status == "started") {
+        if (this.isWrongAnwser()) {
+          if (this.isCorrectLastAnswer) {
+            this.wrongKeys.push(this.answer[this.answer.length - 1])
+          }
+          this.isCorrectLastAnswer = false
+        } else {
+          this.isCorrectLastAnswer = true
+          this.lastCorrectKeyIndex = this.answer.length
         }
-        this.isCorrectLastAnswer = false
-      } else {
-        this.isCorrectLastAnswer = true
-        this.lastCorrectKeyIndex = this.answer.length
+        if (this.isCompleteAnswer()) {
+          this.answeredNum += 1
+          this.wordCount += this.question.length
+          this.question = this.words.pop()
+          this.lastCorrectKeyIndex = 0
+          this.answer = ""
+        }
+        if (this.isFinished()) {
+          this.status = "finished"
+        }
+        return this.question
       }
-      if (this.checkAnswer()) {
-        this.answeredNum += 1
-        this.wordCount += this.question.length
-        this.question = this.words.pop()
-        this.lastCorrectKeyIndex = 0
-        this.answer = ""
+
+      // return results when status is finished
+      if (this.status = "finished") {
+        clearInterval(this.timer)
+        return this.getResultMessage()
       }
-      return this.question
+    },
+    getResultMessage() {
+      var speed = Number(this.wordCount / this.time * 60).toFixed(1)
+      var correctParcent = Number(this.wordCount / (this.wordCount + this.wrongKeys.length) * 100).toFixed(1)
+      return "タイピング速度:" + speed + "WPM, 正答率:" + correctParcent + "%"
     },
     isWrongAnwser() {
       return (this.answer != this.question.slice(0, this.answer.length))
@@ -203,24 +217,10 @@ export default {
     isFinished() {
       return this.answeredNum >= this.questionNum
     },
-    checkAnswer() {
+    isCompleteAnswer() {
       return this.answer == this.question
     },
-    reset() {
-      this.question = ""
-      this.answer = ""
-      this.words = lodash.shuffle(this.allWords)
-      clearInterval(this.timer)
-      this.startTime = 3
-      this.time = 0
-      this.status = "ready"
-      this.answeredNum = 0
-      this.wordCount = 0
-      this.isCorrectLastAnswer = true
-      this.wrongKey = ""
-      this.wrongKeys = []
-    },
-    getClass: function(item) {
+    getKeyClass(item) {
       var classes = []
       if (item.class) {
         classes.push(item.class)
@@ -237,9 +237,18 @@ export default {
       }
       return classes
     },
-    isKeyUp: function(key) {
-      var lastStr = this.answer[this.answer.length - 1]
-      return key == lastStr
+    reset() {
+      this.question = ""
+      this.answer = ""
+      this.words = lodash.shuffle(this.allWords)
+      clearInterval(this.timer)
+      this.startTime = 3
+      this.time = 0
+      this.status = "ready"
+      this.answeredNum = 0
+      this.wordCount = 0
+      this.isCorrectLastAnswer = true
+      this.wrongKeys = []
     },
   }
 }
